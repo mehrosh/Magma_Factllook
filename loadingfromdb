@@ -1,0 +1,1243 @@
+/* 
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+var rows,rows2,rows3;
+var grid_zipcode,grid_userdata,grid4;
+var counties_str="";
+var zip_str="";
+var zip_ids="";
+var geo_ids = new Array();
+var all_states = new Array();
+var all_counties = new Array();
+var all_zipcodes = new Array();
+Ext.Loader.setConfig({
+    enabled: true
+});
+Ext.Loader.setPath('Ext.ux', './ux');
+Ext.require([
+    'Ext.grid.*',
+    'Ext.data.*',
+    // 'Ext.ux.RowExpander',
+    'Ext.selection.CheckboxModel',
+    'Ext.ux.LiveSearchGridPanel',
+    'Ext.util.*',
+    'Ext.selection.CellModel',
+    'Ext.form.*'
+    ]);
+
+function aa(){
+//    alert(as);
+   // document.getElementById('tabGeographySelection').innerHTML='';
+    
+    if(grid4!=null)
+        grid4.destroy();
+    Ext.define('Counties', {
+        extend: 'Ext.data.Model',
+        fields: [
+        {
+            name: 'name_0',
+            type: 'string'
+        },  
+
+        {
+            name: 'name_1',
+            type: 'string'
+        },
+
+        {
+            name: 'name_2',
+            type: 'string'
+        }
+        ]
+    });
+    
+    
+    
+    Ext.QuickTips.init();
+    //    
+    //    var getLocalStore = function() {
+    //        return Ext.create('Ext.data.ArrayStore', {
+    //            model: 'Company',
+    //            data: Ext.grid.dummyData
+    //        });
+    //    };
+    
+    //    var getSelectedStore= function(){
+    //        return Ext.create('Ext.data.ArrayStore', {
+    //            model: 'Counties',          
+    //            data: rows
+    //        }); 
+    //    }
+    
+    var store = new Ext.data.JsonStore( {  
+        fields: [  
+        {
+            name: 'name_0',
+            type: 'string'
+        },  
+
+        {
+            name: 'name_1',
+            type: 'string'
+        },
+        {
+            name: 'gid',
+            type: 'string'
+        }        
+        ],        
+        proxy: {
+            type: 'ajax',
+            url: './php/blogic/get_states.php',
+            limitParam: false,
+            startParam: false,
+            pageParam: false,
+            actionMethods: {
+                read: 'POST'
+            },
+            reader: {
+                type: 'json'                
+            }
+        },        
+        autoLoad: true //false if you want to send paramaters
+        
+    });
+    //    store.load({
+    //        params: {
+    //            param1: 'value1',
+    //            param2: 'value2'
+    //        }
+    //    });
+    
+    //    var store2 = new Ext.data.JsonStore( {  
+    //        fields: [  
+    //            {
+    //                name: 'name_0',
+    //                type: 'string'
+    //            },  
+    //
+    //            {
+    //                name: 'name_1',
+    //                type: 'string'
+    //            },        
+    //        ],        
+    //        proxy: {
+    //            type: 'ajax',
+    //            url: 'http://localhost/ExtjsMultipleSelect/php/get_counties.php',  
+    //            reader: {
+    //                type: 'json'                
+    //            }
+    //        }
+    //        
+    //        // autoLoad: true
+    //        
+    //    });
+    //    store2.load({
+    //        params: {
+    //            counties: counties           
+    //        }
+    //    });
+    //    
+    /**
+     * Custom function used for column renderer
+     * @param {Object} val
+     */
+    function change(val){
+        if(val > 0){
+            return '<span style="color:green;">' + val + '</span>';
+        }else if(val < 0){
+            return '<span style="color:red;">' + val + '</span>';
+        }
+        return val;
+    }
+
+    /**
+     * Custom function used for column renderer
+     * @param {Object} val
+     */
+    function pctChange(val){
+        if(val > 0){
+            return '<span style="color:green;">' + val + '%</span>';
+        }else if(val < 0){
+            return '<span style="color:red;">' + val + '%</span>';
+        }
+        return val;
+    }        
+    
+    
+    
+    grid4 = Ext.create('Ext.ux.LiveSearchGridPanel', {    
+        
+        id:'button-grid',
+        autoScroll: true,
+        store: store,
+        flex: 1,        
+        columns: [
+        {
+            text: "Country", 
+            flex: 1, 
+            sortable: true, 
+            dataIndex: 'name_0'
+        },
+        
+        {
+            text: "State", 
+            flex: 1, 
+            sortable: true, 
+            //renderer: Ext.util.Format.usMoney, 
+            dataIndex: 'name_1'            
+        }       
+        
+        ],
+        columnLines: true,
+        //        selModel: Ext.create('Ext.selection.CheckboxModel', {
+        //            listeners: {
+        //                select: function(sm, selections) {
+        //                //console.log(sm);
+        //                //    console.log(selections.length);
+        //                //  grid4.down('#removeButton').setDisabled(selections.length == 0);
+        //                }
+        //            }
+        //        }),
+        selModel: {
+            selType: 'checkboxmodel'
+            , 
+            mode: 'MULTI'
+        },
+        
+        // inline buttons
+        dockedItems: [{
+            xtype: 'toolbar',
+            dock: 'bottom',
+            ui: 'footer',
+            layout: {
+                pack: 'center'
+            },
+            items: [{
+                minWidth: 80,
+                text: 'Add',
+                handler: function(){                            
+                    counties_str="";
+                    var grid = Ext.getCmp('button-grid');
+                    rows = grid.getSelectionModel().getSelection();
+                    if(!rows.length)
+                    {   //in case this fires with no selection
+                        alert("No Rows Selected!");
+                        return;
+                    }
+                    else
+                    {
+                        for(var i=0;i<rows.length;i++)                        {
+                            
+                            if(i==rows.length-1)
+                            {
+                                counties_str=counties_str+"'"+rows[i].data.gid+"'";
+                            }
+                            else
+                                counties_str=counties_str+"'"+rows[i].data.gid+"'"+",";
+                        }
+                        console.log(counties_str);
+                        //    var sm = Ext.create('Ext.selection.CheckboxModel');
+                        document.getElementById('mydiv2').innerHTML='';
+                        var grid2 = Ext.create('Ext.ux.LiveSearchGridPanel', {
+                            id: 'county_grid',
+                            emptyText: 'Loading',
+                            autoScroll: true,
+                            store: new Ext.data.ArrayStore( {  
+                                fields: [  
+                                {
+                                    name: 'state',
+                                    type: 'string'
+                                },  
+
+                                {
+                                    name: 'county',
+                                    type: 'string'
+                                },
+                                {
+                                    name: 'gid',
+                                    type: 'string'
+                                }
+                                ],        
+                                proxy: {
+                                    type: 'ajax',
+                                    url: './php/blogic/get_counties.php',
+                                    limitParam: false,
+                                    startParam: false,
+                                    pageParam: false,
+                                    actionMethods: {
+                                        read: 'POST'
+                                    },
+                                    reader: {
+                                        type: 'json'                
+                                    },                                    
+                                    extraParams:{
+                                        counties: counties_str 
+                                    }                                            
+                                },
+                                autoLoad: true                            
+                            }),                                        
+                            flex: 1,
+                            //                            selModel: new Ext.create('Ext.selection.CheckboxModel', {
+                            //                                listeners: {
+                            //                                    select: function(sm, selections) {
+                            //                                    //console.log(sm);
+                            //                                   selModel //    console.log(selections.length);
+                            //                                    //  grid4.down('#removeButton').setDisabled(selections.length == 0);
+                            //                                    }
+                            //                                }
+                            //                            }),
+                            selModel: {
+                                selType: 'checkboxmodel'
+                                , 
+                                mode: 'MULTI'
+                            },
+                            columns: [
+                            {
+                                text: "County",
+                                flex: 1,                                
+                                sortable: true,
+                                dataIndex: 'county'
+                            },
+    
+                            {
+                                text: "State", 
+                                sortable: true,                                
+                                dataIndex: 'state'
+                            }                                                         
+                            ],
+                            dockedItems: [{
+                                xtype: 'toolbar',
+                                dock: 'bottom',
+                                ui: 'footer',
+                                layout: {
+                                    pack: 'center'
+                                },
+                                items: [{
+                                    minWidth: 80,
+                                    text: 'Add',
+                                    handler: function(){
+                                        zip_str="";
+                                        var grid = Ext.getCmp('county_grid');
+                                        rows2 = grid.getSelectionModel().getSelection();
+                                        if(!rows2.length)
+                                        {   //in case this fires with no selection
+                                            alert("No Rows Selected!");
+                                            return;
+                                        }
+                                        else
+                                        {
+                                            for(var i=0;i<rows2.length;i++)                        {
+                            
+                                                if(i==rows2.length-1)
+                                                {
+                                                    zip_str=zip_str+"'"+rows2[i].data.gid+"'";
+                                                }
+                                                else
+                                                    zip_str=zip_str+"'"+rows2[i].data.gid+"'"+",";
+                                            }
+                                            console.log(zip_str);
+                                            //    var sm = Ext.create('Ext.selection.CheckboxModel');
+                                            document.getElementById('mydiv3').innerHTML='';
+                                        
+                                            //zip code table
+                                            grid_zipcode = Ext.create('Ext.ux.LiveSearchGridPanel', {
+                                                id: 'zip_grid',
+                                                emptyText: 'Loading',
+                                                html: 'heloworld',
+                                                autoScroll: true,
+                                                store: new Ext.data.ArrayStore( {  
+                                                    fields: [  
+                                                    {
+                                                        name: 'zipcode',
+                                                        type: 'string'
+                                                    },  
+
+                                                    {
+                                                        name: 'county',
+                                                        type: 'string'
+                                                    },
+                                                    {
+                                                        name: 'state',
+                                                        type: 'string'
+                                                    },
+                                                    {
+                                                        name: 'gid',
+                                                        type: 'string'
+                                                    }
+                                                    ],        
+                                                    proxy: {
+                                                        type: 'ajax',
+                                                        url: './php/blogic/get_zipcodes.php',
+                                                        limitParam: false,
+                                                        startParam: false,
+                                                        pageParam: false,
+                                                        actionMethods: {
+                                                            read: 'POST'
+                                                        },
+                                                        reader: {
+                                                            type: 'json'                
+                                                        },
+                                                        extraParams:{
+                                                            zip_str: zip_str 
+                                                        } 
+                                                                                                   
+                                                    },
+                                                    autoLoad: true                            
+                                                }),             
+                                                flex: 1,
+                                                //                                                selModel: new Ext.create('Ext.selection.CheckboxModel', {
+                                                //                                                    listeners: {
+                                                //                                                        select: function(sm, selections) {
+                                                //                                                        //console.log(sm);
+                                                //                                                        //    console.log(selections.length);
+                                                //                                                        //  grid4.down('#removeButton').setDisabled(selections.length == 0);
+                                                //                                                        }
+                                                //                                                    }
+                                                //                                                }),
+                                                selModel: {
+                                                    selType: 'checkboxmodel'
+                                                    , 
+                                                    mode: 'MULTI'
+                                                },
+                                                columns: [
+                                                {
+                                                    text: "Zipcodes",
+                                                    flex: 1,                                
+                                                    sortable: true,
+                                                    dataIndex: 'zipcode'
+                                                },
+    
+                                                {
+                                                    text: "County", 
+                                                    flex: 1,
+                                                    sortable: true,                                
+                                                    dataIndex: 'county'
+                                                },
+                                                {
+                                                    text: "State", 
+                                                    flex: 1,
+                                                    sortable: true,                                
+                                                    dataIndex: 'state'
+                                                }
+                                                ],
+                                                dockedItems: [{
+                                                    xtype: 'toolbar',
+                                                    dock: 'bottom',
+                                                    ui: 'footer',
+                                                    layout: {
+                                                        pack: 'center'
+                                                    },
+                                                    items: [{
+                                                        minWidth: 80,
+                                                        text: 'Save',
+                                                        handler: function(){
+                                                            if(grid_userdata!=null)
+                                                                grid_userdata.destroy();
+                                                            zip_ids="";
+                                                            var grid = Ext.getCmp('zip_grid');
+                                                            rows3 = grid.getSelectionModel().getSelection();
+                                                            if(!rows3.length)
+                                                            {   //in case this fires with no selection
+                                                                alert("No Rows Selected!");
+                                                                return;
+                                                            }
+                                                            else
+                                                            {
+                                                                geo_ids = [];
+                                                                all_counties = [];
+                                                                all_states = [];
+                                                                all_zipcodes = [];
+                                                                for(var i=0;i<rows3.length;i++)                        
+                                                                {
+                                                                    geo_ids.push(rows3[i].data.gid);
+                                                                    all_counties.push(rows3[i].data.county);
+                                                                    all_states.push(rows3[i].data.state);
+                                                                    all_zipcodes.push(rows3[i].data.zipcode);
+                            
+                                                                //                                                                    if(i==rows3.length-1)
+                                                                //                                                                    {
+                                                                //                                                                        zip_ids=zip_ids+""+rows3[i].data.gid+"";
+                                                                //                                                                    }
+                                                                //                                                                    else
+                                                                //                                                                        zip_ids=zip_ids+""+rows3[i].data.gid+""+",";
+                                                                }
+                                                                console.log(zip_ids);
+                                                                document.getElementById('predatatable').innerHTML='';
+                                                                grid_userdata= Ext.create('Ext.ux.LiveSearchGridPanel', {
+                                                                    id: 'user_grid',
+                                                                    emptyText: 'Loading',
+                                                                    html: 'heloworld',
+                                                                    autoScroll: true,
+                                                                    store: new Ext.data.ArrayStore( {  
+                                                                        fields: [  
+                                                                        {
+                                                                            name: 'zipcode',
+                                                                            type: 'string'
+                                                                        },  
+
+                                                                        {
+                                                                            name: 'county',
+                                                                            type: 'string'
+                                                                        },
+                                                                        {
+                                                                            name: 'state',
+                                                                            type: 'string'
+                                                                        },
+                                                                        {
+                                                                            name: 'Data',
+                                                                            type: 'string'
+                                                                        }
+                                                                        ],        
+                                                                        //        proxy: {
+                                                                        //           type: 'ajax',
+                                                                        //         url: 'http://localhost/ExtjsMultipleSelect/php/get_zipcodes.php',
+                                                                        //        limitParam: false,
+                                                                        //           startParam: false,
+                                                                        //          pageParam: false,
+                                                                        //           actionMethods: {
+                                                                        //           read: 'POST'
+                                                                        //            },
+                                                                        //               reader: {
+                                                                        //                     type: 'json'                
+                                                                        //           },
+                                                                        //            extraParams:{
+                                                                        //                 zip_str: zip_str 
+                                                                        //                   }                                                                                                                
+                                                                        //              },
+                                                                        data: rows3,
+                                                                        autoLoad: true                            
+                                                                    }),             
+                                                                    flex: 1,
+                                                                    //                                                                    
+                                                                    selModel: {
+                                                                        selType: 'checkboxmodel'
+                                                                        , 
+                                                                        mode: 'MULTI'
+                                                                    },
+                                                                    columns: [
+                                                                    {
+                                                                        text: "Zipcodes",
+                                                                        flex: 1,                                
+                                                                        sortable: true,
+                                                                        dataIndex: 'zipcode'
+                                                                    },
+    
+                                                                    {
+                                                                        text: "County", 
+                                                                        flex: 1,
+                                                                        sortable: true,                                
+                                                                        dataIndex: 'county'
+                                                                    },
+                                                                    {
+                                                                        text: "State", 
+                                                                        flex: 1,
+                                                                        sortable: true,                                
+                                                                        dataIndex: 'state'
+                                                                    },
+                                                                    {
+                                                                        text: "Data",
+                                                                        flex: 1,
+                                                                        sortable: true,
+                                                                        dataIndex: 'Data'
+                                                                    }
+                                                                    ],
+                                                                    dockedItems: [{
+                                                                        xtype: 'toolbar',
+                                                                        dock: 'bottom',
+                                                                        ui: 'footer',
+                                                                        layout: {
+                                                                            pack: 'center'
+                                                                        }
+                                                                    //                                                                                                    ,
+                                                                    //                                                                                                    items: [{
+                                                                    //                                                                                                            minWidth: 80,
+                                                                    //                                                                                                            text: 'Save'
+                                                                    //                                                                                                        }]
+                                                                    }],
+                                                                    maxHeight: 250,
+                                                                    columnLines: true,                            
+                                                                    frame: true,
+                                                                    title: 'User Selected Data',
+                                                                    iconCls: 'icon-grid',
+                                                                    renderTo: Ext.get('predatatable')
+                                                                })
+                                                            }
+                                                        }
+                                                    }                                                
+                                                    ]
+                                                }],
+                                                height: 380,
+                                                columnLines: true,                            
+                                                frame: true,
+                                                title: 'Select Zipcodes',
+                                                iconCls: 'icon-grid',
+                                                renderTo: Ext.get('mydiv3')
+                                            })
+                                        }
+                                    }
+                                },
+
+                                {
+                                    minWidth: 80,
+                                    text: 'Clear Selection',
+                                    handler: function(){
+                                        //console.log(grid2)                                        
+                                        grid2.destroy();                                                                                                                    
+                                        var grid_sm=grid.getSelectionModel();
+                                        //console.log(grid_sm);
+                                        //console.log(grid_zipcode);
+                                        
+                                        grid_zipcode.destroy();
+                                        grid_userdata.destroy();
+                                        grid_sm.deselectAll();
+                                        
+                                    } 
+                                }
+                                ]
+                            }],
+                            height: 380,
+                            columnLines: true,                            
+                            frame: true,
+                            title: 'Select Counties',
+                            iconCls: 'icon-grid',
+                            renderTo: Ext.get('mydiv2')
+                        });
+                    }                   
+             
+                }
+            },                                  
+            ]
+        }
+
+        ],
+        
+        //width: 600,
+        height: 380,
+        frame: true,
+        //seltype: 'cellmodel',
+        title: 'Select States',
+        iconCls: 'icon-grid',
+        renderTo: Ext.get('mydiv')
+    });
+}
+
+function get_counties(){
+    //    alert("counties");
+    /**
+     * Custom function used for column renderer
+     * @param {Object} val
+     */
+//    document.getElementById('tabGeographySelection').innerHTML='';
+    if(grid4!=null)
+        grid4.destroy();
+    
+    function change(val){
+        if(val > 0){
+            return '<span style="color:green;">' + val + '</span>';
+        }else if(val < 0){
+            return '<span style="color:red;">' + val + '</span>';
+        }
+        return val;
+    }
+
+    /**
+     * Custom function used for column renderer
+     * @param {Object} val
+     */
+    function pctChange(val){
+        if(val > 0){
+            return '<span style="color:green;">' + val + '%</span>';
+        }else if(val < 0){
+            return '<span style="color:red;">' + val + '%</span>';
+        }
+        return val;
+    }        
+    
+    
+    grid4 = Ext.create('Ext.ux.LiveSearchGridPanel', {    
+        
+        id:'button-grid',
+        autoScroll: true,
+        store: new Ext.data.JsonStore( {  
+            fields: [  
+            {
+                name: 'name_0',
+                type: 'string'
+            },  
+
+            {
+                name: 'name_1',
+                type: 'string'
+            },
+            {
+                name: 'gid',
+                type: 'string'
+            }        
+            ],        
+            proxy: {
+                type: 'ajax',
+                url: './php/blogic/get_states.php',
+                limitParam: false,
+                startParam: false,
+                pageParam: false,
+                actionMethods: {
+                    read: 'POST'
+                },
+                reader: {
+                    type: 'json'                
+                }
+            },        
+            autoLoad: true //false if you want to send paramaters
+        
+        }),
+        flex: 1,        
+        columns: [
+        {
+            text: "Country", 
+            flex: 1, 
+            sortable: true, 
+            dataIndex: 'name_0'
+        },
+        
+        {
+            text: "State", 
+            flex: 1, 
+            sortable: true, 
+            //renderer: Ext.util.Format.usMoney, 
+            dataIndex: 'name_1'            
+        }       
+        
+        ],
+        columnLines: true,
+        //        selModel: Ext.create('Ext.selection.CheckboxModel', {
+        //            listeners: {
+        //                select: function(sm, selections) {
+        //                //console.log(sm);
+        //                //    console.log(selections.length);
+        //                //  grid4.down('#removeButton').setDisabled(selections.length == 0);
+        //                }
+        //            }
+        //        }),
+        selModel: {
+            selType: 'checkboxmodel'
+            , 
+            mode: 'MULTI'
+        },
+        
+        // inline buttons
+        dockedItems: [{
+            xtype: 'toolbar',
+            dock: 'bottom',
+            ui: 'footer',
+            layout: {
+                pack: 'center'
+            },
+            items: [{
+                minWidth: 80,
+                text: 'Next',
+                handler: function(){                         
+                    state_ids="";
+                    var grid = Ext.getCmp('button-grid');
+                    rows = grid.getSelectionModel().getSelection();
+                    if(!rows.length)
+                    {   //in case this fires with no selection
+                        alert("No Rows Selected!");
+                        return;
+                    }
+                    else
+                    {
+                        for(var i=0;i<rows.length;i++)                        {
+                            
+                            if(i==rows.length-1)
+                            {
+                                state_ids=state_ids+"'"+rows[i].data.gid+"'";
+                            }
+                            else
+                                state_ids=state_ids+"'"+rows[i].data.gid+"'"+",";
+                        }
+                        console.log(state_ids);
+                        document.getElementById('mydiv2').innerHTML='';
+                        var grid2 = Ext.create('Ext.ux.LiveSearchGridPanel', {
+                            id: 'county_grid',
+                            emptyText: 'Loading',
+                            autoScroll: true,
+                            store: new Ext.data.ArrayStore( {  
+                                fields: [  
+                                {
+                                    name: 'state',
+                                    type: 'string'
+                                },  
+
+                                {
+                                    name: 'county',
+                                    type: 'string'
+                                },
+                                {
+                                    name: 'gid',
+                                    type: 'string'
+                                }
+                                ],        
+                                proxy: {
+                                    type: 'ajax',
+                                    url: './php/blogic/get_counties.php',
+                                    limitParam: false,
+                                    startParam: false,
+                                    pageParam: false,
+                                    actionMethods: {
+                                        read: 'POST'
+                                    },
+                                    reader: {
+                                        type: 'json'                
+                                    },                                    
+                                    extraParams:{
+                                        counties: state_ids 
+                                    }                                            
+                                },
+                                autoLoad: true                            
+                            }),                                        
+                            flex: 1,
+                            //                            selModel: new Ext.create('Ext.selection.CheckboxModel', {
+                            //                                listeners: {
+                            //                                    select: function(sm, selections) {
+                            //                                    //console.log(sm);
+                            //                                    //    console.log(selections.length);
+                            //                                    //  grid4.down('#removeButton').setDisabled(selections.length == 0);
+                            //                                    }
+                            //                                }
+                            //                            }),
+                            selModel: {
+                                selType: 'checkboxmodel'
+                                , 
+                                mode: 'MULTI'
+                            },
+                            columns: [
+                            {
+                                text: "County",
+                                flex: 1,                                
+                                sortable: true,
+                                dataIndex: 'county'
+                            },
+    
+                            {
+                                text: "State",
+                                flex: 1,
+                                sortable: true,                                
+                                dataIndex: 'state'
+                            }                                                         
+                            ],
+                            dockedItems: [{
+                                xtype: 'toolbar',
+                                dock: 'bottom',
+                                ui: 'footer',
+                                layout: {
+                                    pack: 'center'
+                                },
+                                items: [{
+                                    minWidth: 80,
+                                    text: 'Save',
+                                    handler: function(){
+                                        if(grid_userdata!=null)
+                                            grid_userdata.destroy();
+                                        county_ids="";
+                                        var grid = Ext.getCmp('county_grid');
+                                        rows3 = grid.getSelectionModel().getSelection();
+                                        if(!rows3.length)
+                                        {   //in case this fires with no selection
+                                            alert("No Rows Selected!");
+                                            return;
+                                        }
+                                        else
+                                        {
+                                            geo_ids = [];
+                                            all_counties = [];
+                                            all_states = [];
+                                            all_zipcodes = [];
+                                            for(var i=0;i<rows3.length;i++)                        
+                                            {
+                                                
+                                                
+                                                geo_ids.push(rows3[i].data.gid);
+                                                all_counties.push(rows3[i].data.county);
+                                                all_states.push(rows3[i].data.state);
+                                                all_zipcodes.push(0);
+                            
+                                            //                                                if(i==rows3.length-1)
+                                            //                                                {
+                                            //                                                    county_ids=county_ids+"'"+rows3[i].data.gid+"'";
+                                            //                                                }
+                                            //                                                else
+                                            //                                                    county_ids=county_ids+"'"+rows3[i].data.gid+"'"+",";
+                                            }
+                                            console.log(county_ids);
+                                            document.getElementById('predatatable').innerHTML='';
+                                            grid_userdata= Ext.create('Ext.ux.LiveSearchGridPanel', {
+                                                id: 'user_grid',
+                                                emptyText: 'Loading',
+                                                html: 'heloworld',
+                                                autoScroll: true,
+                                                store: new Ext.data.ArrayStore( {  
+                                                    fields: [                                                       
+
+                                                    {
+                                                        name: 'county',
+                                                        type: 'string'
+                                                    },
+                                                    {
+                                                        name: 'state',
+                                                        type: 'string'
+                                                    }
+                                                   
+                                                    ],        
+                                                    
+                                                    data: rows3,
+                                                    autoLoad: true                            
+                                                }),             
+                                                flex: 1,
+                                                //                                                selModel: new Ext.create('Ext.selection.CheckboxModel', {
+                                                //                                                    listeners: {
+                                                //                                                        select: function(sm, selections) {
+                                                //                                                        //console.log(sm);
+                                                //                                                        //    console.log(selections.length);
+                                                //                                                        //  grid4.down('#removeButton').setDisabled(selections.length == 0);
+                                                //                                                        }
+                                                //                                                    }
+                                                //                                                }),
+                                                selModel: {
+                                                    selType: 'checkboxmodel'
+                                                    , 
+                                                    mode: 'MULTI'
+                                                },
+                                                columns: [
+                                                
+    
+                                                {
+                                                    text: "County", 
+                                                    flex: 1,
+                                                    sortable: true,                                
+                                                    dataIndex: 'county'
+                                                },
+                                                {
+                                                    text: "State", 
+                                                    flex: 1,
+                                                    sortable: true,                                
+                                                    dataIndex: 'state'
+                                                }
+                                              
+                                                ],
+                                                dockedItems: [{
+                                                    xtype: 'toolbar',
+                                                    dock: 'bottom',
+                                                    ui: 'footer',
+                                                    layout: {
+                                                        pack: 'center'
+                                                    }                                               
+                                                }],
+                                                  maxHeight: 250,
+                                                columnLines: true,                            
+                                                frame: true,
+                                                title: 'User Selected Data',
+                                                iconCls: 'icon-grid',
+                                                renderTo: Ext.get('predatatable')
+                                            })
+                                        } 
+                                    }
+                                },
+                                {
+                                    minWidth: 80,
+                                    text: 'Clear Selection',
+                                    handler: function(){
+                                        grid2.destroy();                                                                                                                    
+                                        var grid_sm=grid.getSelectionModel(); 
+                                        grid_userdata.destroy();
+                                        grid_sm.deselectAll();
+                                    }
+                                }
+                                ]
+                            }],
+                           height: 380,
+                            frame: true,                            
+                            title: 'Select Counties',
+                            iconCls: 'icon-grid',
+                            renderTo: Ext.get('mydiv2')
+                        })
+                    }
+             
+                }
+            },                                  
+            ]
+        }
+
+        ],
+        
+        //width: 600,
+        height: 380,
+        frame: true,
+        //seltype: 'cellmodel',
+        title: 'Select States',
+        iconCls: 'icon-grid',
+        renderTo: Ext.get('mydiv')
+    });
+}
+
+
+
+function get_states(){
+    /**
+     * Custom function used for column renderer
+     * @param {Object} val
+     */
+//    document.getElementById('tabGeographySelection').innerHTML='';
+    function change(val){
+        if(val > 0){
+            return '<span style="color:green;">' + val + '</span>';
+        }else if(val < 0){
+            return '<span style="color:red;">' + val + '</span>';
+        }
+        return val;
+    }
+
+    /**
+     * Custom function used for column renderer
+     * @param {Object} val
+     */
+    function pctChange(val){
+        if(val > 0){
+            return '<span style="color:green;">' + val + '%</span>';
+        }else if(val < 0){
+            return '<span style="color:red;">' + val + '%</span>';
+        }
+        return val;
+    }        
+    
+    
+    var grid4 = Ext.create('Ext.ux.LiveSearchGridPanel', {    
+        
+        id:'button-grid',
+        autoScroll: true,        
+        store: new Ext.data.JsonStore( {  
+            fields: [  
+            {
+                name: 'name_0',
+                type: 'string'
+            },  
+
+            {
+                name: 'name_1',
+                type: 'string'
+            },
+            {
+                name: 'gid',
+                type: 'string'
+            }        
+            ],        
+            proxy: {
+                type: 'ajax',
+                url: './php/blogic/get_states.php',
+                limitParam: false,
+                startParam: false,
+                pageParam: false,
+                actionMethods: {
+                    read: 'POST'
+                },
+                reader: {
+                    type: 'json'                
+                }
+            },        
+            autoLoad: true //false if you want to send paramaters
+        
+        }),
+        flex: 1,        
+        columns: [
+        {
+            text: "Country", 
+            flex: 1, 
+            sortable: true, 
+            dataIndex: 'name_0'
+        },
+        
+        {
+            text: "State", 
+            flex: 1, 
+            sortable: true, 
+            //renderer: Ext.util.Format.usMoney, 
+            dataIndex: 'name_1'            
+        }       
+        
+        ],
+        columnLines: true,
+        selModel: Ext.create('Ext.selection.CheckboxModel', {
+            listeners: {
+                select: function(sm, selections) {
+                //console.log(sm);
+                //    console.log(selections.length);
+                //  grid4.down('#removeButton').setDisabled(selections.length == 0);
+                }
+            }
+        }),
+        
+        // inline buttons
+        dockedItems: [{
+            xtype: 'toolbar',
+            dock: 'bottom',
+            ui: 'footer',
+            layout: {
+                pack: 'center'
+            },
+            items: [{
+                minWidth: 80,
+                text: 'Next',
+                handler: function(){                         
+                    state_ids="";
+                    var grid = Ext.getCmp('button-grid');
+                    rows = grid.getSelectionModel().getSelection();
+                    if(!rows.length)
+                    {   //in case this fires with no selection
+                        alert("No Rows Selected!");
+                        return;
+                    }
+                    else
+                    {
+                        geo_ids = [];
+                        all_counties = [];
+                        all_states = [];
+                        all_zipcodes = [];
+                        for(var i=0;i<rows.length;i++)                        
+                        {
+                            geo_ids.push(rows[i].data.gid);
+                            all_counties.push(0);
+                            all_states.push(rows[i].data.name_1);
+//                            alert(all_states[i]);
+                            all_zipcodes.push(0);
+                            
+                        //                            if(i==rows.length-1)
+                        //                            {
+                        //                                state_ids=state_ids+"'"+rows[i].data.gid+"'";
+                        //                            }
+                        //                            else
+                        //                                state_ids=state_ids+"'"+rows[i].data.gid+"'"+",";
+                        }
+                        console.log(state_ids);
+                        
+                        document.getElementById('predatatable').innerHTML='';
+                        grid_userdata= Ext.create('Ext.ux.LiveSearchGridPanel', {
+                            id: 'user_grid',
+                            emptyText: 'Loading',
+                            html: 'heloworld',
+                            autoScroll: true,
+                            store: new Ext.data.JsonStore( {  
+                                fields: [  
+                                {
+                                    name: 'name_0',
+                                    type: 'string'
+                                },  
+
+                                {
+                                    name: 'name_1',
+                                    type: 'string'
+                                },
+                                {
+                                    name: 'gid',
+                                    type: 'string'
+                                }        
+                                ],        
+                                data: rows, 
+                                autoLoad: true //false if you want to send paramaters
+        
+                            }),
+                            flex: 1,        
+                            columns: [
+                            {
+                                text: "Country", 
+                                flex: 1, 
+                                sortable: true, 
+                                dataIndex: 'name_0'
+                            },
+        
+                            {
+                                text: "State", 
+                                flex: 1, 
+                                sortable: true, 
+                                //renderer: Ext.util.Format.usMoney, 
+                                dataIndex: 'name_1'            
+                            }       
+                            ],
+                            dockedItems: [{
+                                xtype: 'toolbar',
+                                dock: 'bottom',
+                                ui: 'footer',
+                                layout: {
+                                    pack: 'center'
+                                }                                               
+                            }],
+                              maxHeight: 250,
+                            columnLines: true,                            
+                            frame: true,
+                            title: 'User Selected Data',
+                            iconCls: 'icon-grid',
+                            renderTo: Ext.get('predatatable')
+                        })
+                    }
+                }
+            },
+            {
+                minWidth: 80,
+                text: 'Clear Selection',
+                handler:function(){                                                                                                                                   
+                    var grid_sm=grid4.getSelectionModel();
+                    grid_userdata.destroy();
+                    grid_sm.deselectAll();
+                }
+            }
+                                                 
+            ]
+        }
+
+        ],
+        
+        //width: 600,
+        height: 380,
+        frame: true,
+        //seltype: 'cellmodel',
+        title: 'Select States',
+        iconCls: 'icon-grid',
+        renderTo: Ext.get('mydiv')
+    });
+};
+
+
+function CreateTemplate(){
+    var template_name = $('#templateName').val();
+    var template_type = $('#text').val();
+    var user_name = ($("#Email").text()).trim();
+    //    email = user_name;
+    //    zip_ids = zip_ids 
+    //    alert(user_name);
+    //    alert(rows3.length);
+    geo_ids.push(template_name);
+    geo_ids.push(template_type);
+    geo_ids.push(user_name);
+    //    alert(geo_ids.length);
+        
+        
+    $.ajax({
+        type: "POST",
+        url: "php/blogic/add_template.php",
+        async: false,
+        data:{
+            geography_ids:geo_ids,
+            states: all_states,
+            counties:all_counties,
+            zipcodes: all_zipcodes
+        },
+        //        data:"geography_ids="+zip_ids + "&template_name="+template_name+"&template_type="+template_type
+        //        ,
+        
+        //        data: "template_name=" + template_name + "&password="+pass,            
+        complete: function (data) {
+            
+            $("#aa").val(data.responseText);
+        //            alert($("#aa").val());
+        }
+    });
+}
